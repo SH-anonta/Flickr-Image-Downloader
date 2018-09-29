@@ -6,6 +6,7 @@ import os.path
 import csv
 import logging
 import PIL.Image
+import flickr_api.flickrerrors
 import piexif
 
 def getLocationExif(photo):
@@ -64,7 +65,7 @@ class FlickLoader:
             self.end_at = len(all_photos)
 
 
-        logging.info('Total {} photos discovered, proceeding to download'.format(len(all_photos)))
+        logging.info('Total {} photos discovered, proceeding to download photos {} to {}'.format(len(all_photos), self.resume_from, self.end_at))
         self.savePhotos(all_photos, self.export_directory)
 
     def createPhotoFileName(self, id, title):
@@ -80,17 +81,34 @@ class FlickLoader:
             file_name = self.createPhotoFileName(photo.id, photo.title)
             file_path = os.path.join(export_to, file_name)
 
-            logging.info('Downloading photo {}'.format(photo.id))
-            photo.save(file_path)
-            logging.info('Download finished, photo {} saved to {}'.format(photo.id, file_path))
+            logging.info('Downloading photo #{} name:{}'.format(photo_number, file_name))
 
             # save the exif as json in the csv file
-            exif = photo.getExif()
+
+            try:
+                exif = photo.getExif()
+            except flickr_api.flickrerrors.FlickrAPIError as e:
+                logging.error('Failed to get EXIF dat aof photo #{} name:{} | Error: {}'.format(photo_number, file_name, e.message))
+                continue
+
             exif_data = {
-                x.tag : x.raw
+                x.tag: x.raw
                 for x in exif
             }
 
+            if not self.hasGPSData(exif_data):
+                # if the photo does not have GPS skip downloading it
+                logging.info('Skipping photo #{}, {} because GPS data is unavailable'.format(photo_number, file_name))
+                continue
+
+            try:
+                photo.save(file_path)
+            except Exception as e:
+                logging.error('Failed to download {} : Error {}'.format(file_name, e.message))
+            else:
+                logging.info('Download finished, photo {} saved to {}'.format(photo.id, file_path))
+
+            # write to csv after downloading
             self.csv.writerow({
                 '#' : photo_number,
                 'ID' : photo.id,
@@ -100,12 +118,8 @@ class FlickLoader:
 
             photo_number+= 1
 
-    def setExifData(self, file_path, exif):
-        file = PIL.Image.open(file_path)
-        exif_dict = piexif.load(file.info['exif'])
-
-        for x in exif:
-            exif_dict[x] = exif[x]
+    def hasGPSData(self, exif):
+        return 'GPSLatitude' in exif
 
 
 
@@ -114,8 +128,6 @@ def retrieveParams():
     return sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]),
 
 if __name__ == '__main__':
-    # r'F:\CollectedPhotos/'
-    # 'MrKotek'
     user_name, export_path, start, end = retrieveParams()
 
     # end should be < 0 if the user wats to download all photos
@@ -127,10 +139,10 @@ if __name__ == '__main__':
     api_key = 'f5fc9ccc5de725609c3696947fef7413'
     api_secret = '7845ccc1869642ca'
 
-    # logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+    # Logs will be sent to console and a file
+    log_file_path = os.path.join(export_path, 'app.log')
+    logging.basicConfig(filename= log_file_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
     logging.getLogger().addHandler(logging.StreamHandler())
 
     loader = FlickLoader(user_name, export_path, api_key, api_secret)
-
     loader.collectAllPhotos(start, end)

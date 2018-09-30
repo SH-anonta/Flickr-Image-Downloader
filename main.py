@@ -2,8 +2,10 @@ import flickr_api
 import logging
 import json
 import os
-import explorer
 import csv
+
+import explorer
+import downloader
 
 def initializeFlickrAPI():
     api_key = 'f5fc9ccc5de725609c3696947fef7413'
@@ -48,12 +50,18 @@ if __name__ == '__main__':
     initializeFlickrAPI()
     configureLogging(export_path)
 
-    print folder_name
+    logging.info('-------------------Start-------------------')
 
     explorer = explorer.FlickrUserExplorer(url)
-    photos = explorer.findPhotosWithGeoTag(1, 1)
+    photos = explorer.findPhotosWithGeoTag(1, 14)
 
     exportPhotoDataToCsv(export_path, photos)
+
+    photo_path = os.path.join(export_path, 'photos')
+    createDirectory(photo_path)
+
+    download = downloader.PhotoDownloader(photo_path)
+    download.downloadPhotos(photos)
 
 
 

@@ -79,7 +79,7 @@ class FlickrUserExplorer:
     # if end_page is not provided, all pages will be explored, starting from start_page
     def findPhotosWithGeoTag(self, start_page, end_page):
         photos = self.findPhotos(start_page, end_page)
-        photos = photos[:50] # todo remove, added only for debugging
+        # photos = photos[:20] # todo remove, added only for debugging
 
         logging.info('Retrieving exif data of found photos')
 

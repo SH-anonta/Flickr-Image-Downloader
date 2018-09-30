@@ -19,8 +19,7 @@ if __name__ == '__main__':
     initializeFlickrAPI()
     configureLogging('logs')
 
-    user_name = 'Olhar Essencial'
-    url = 'https://www.flickr.com/photos/essencialolharfotografia/'
+    url = 'https://www.flickr.com/photos/mrkotek/'
 
     hunter = explorer.FlickrUserExplorer(url)
 

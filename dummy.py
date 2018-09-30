@@ -5,25 +5,18 @@ import json
 import os.path
 import csv
 import logging
-import PIL.Image
 import flickr_api.flickrerrors
-import piexif
 
 def getLocationExif(photo):
     return photo.getExif()
 
 class FlickLoader:
 
-    def getUniqueFileName(self):
-        self._unique_number+= 1
-
-        return str(self._unique_number)+'.jpg'
-
     def __init__(self, user_name, export_to, api_key, api_secret):
 
         flickr_api.set_keys(api_key=api_key, api_secret=api_secret)
 
-        self._unique_number = 0
+
         self.user = flickr_api.Person.findByUserName(user_name)
         self.export_directory = export_to
 
@@ -33,14 +26,14 @@ class FlickLoader:
         csv_file = open(os.path.join(self.export_directory, 'exif.csv'), 'wb')
         self.csv = csv.DictWriter(csv_file, ('#', 'ID', 'FileName', 'EXIF'))
 
-    def collectAllPhotos(self, start_from = 1, end_at= None):
+    def collectAllPhotos(self, start_from = 1, end_at= None, max_page= 99999):
         """
         :param start_from: from which photo should the loader continue
         """
         # to ensure previous ly downloaded files don't get over written
-        self._unique_number = start_from-1
         self.resume_from = start_from
         self.end_at = end_at
+        self.max_page = max_page
 
         # needed to detect if the last page of the user's photos has been reached
         last_page_photo_id = -1
@@ -52,7 +45,7 @@ class FlickLoader:
         while True:
             photos = self.user.getPhotos(page= page_no)
 
-            if last_page_photo_id == photos[0].id:
+            if last_page_photo_id == photos[0].id or page_no > self.max_page:
                 break
 
             logging.info('Visiting page {}'.format(page_no))
@@ -82,6 +75,8 @@ class FlickLoader:
             file_path = os.path.join(export_to, file_name)
 
             logging.info('Downloading photo #{} name:{}'.format(photo_number, file_name))
+
+            photo_number += 1
 
             # save the exif as json in the csv file
 
@@ -116,7 +111,7 @@ class FlickLoader:
                 'EXIF' : json.dumps(exif_data)
             })
 
-            photo_number+= 1
+
 
     def hasGPSData(self, exif):
         return 'GPSLatitude' in exif
@@ -124,15 +119,21 @@ class FlickLoader:
 
 
 def retrieveParams():
-    # export path, start from, end at,
-    return sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]),
+    # export path, start from, end at, max page to visit
+    return sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]),
+
+
+
 
 if __name__ == '__main__':
-    user_name, export_path, start, end = retrieveParams()
+    user_name, export_path, start, end, max_page = retrieveParams()
 
     # end should be < 0 if the user wats to download all photos
     if end < 0:
         end = None
+
+    if not os.path.isdir(export_path):
+        os.mkdir(export_path)
 
     print user_name, export_path, start, end
 
@@ -145,4 +146,4 @@ if __name__ == '__main__':
     logging.getLogger().addHandler(logging.StreamHandler())
 
     loader = FlickLoader(user_name, export_path, api_key, api_secret)
-    loader.collectAllPhotos(start, end)
+    loader.collectAllPhotos(start, end, max_page)

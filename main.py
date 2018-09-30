@@ -41,9 +41,10 @@ def createDirectory(path):
         os.mkdir(path)
 
 if __name__ == '__main__':
-    url = 'https://www.flickr.com/photos/mrkotek'
+    # url = 'https://www.flickr.com/photos/mrkotek'
+    url = 'https://www.flickr.com/photos/theogeo/'
 
-    folder_name = 'mrkotek'
+    folder_name = 'theogeo4'
     export_path = r'G:\Flickr'
     export_path = os.path.join(export_path, folder_name)
     createDirectory(export_path)
@@ -51,10 +52,15 @@ if __name__ == '__main__':
     initializeFlickrAPI()
     configureLogging(export_path)
 
-    logging.info('-------------------Start-------------------')
+    start_page = 61
+    end_page   = 90
 
-    explorer = explorer.FlickrUserExplorer(url, 10)
-    photos = explorer.findPhotosWithGeoTag(1, 14)
+    logging.info('-------------------Start-------------------')
+    logging.info('Attempting to download photos from page {} to {}'.format(start_page, end_page))
+    # 345
+    explorer = explorer.FlickrUserExplorer(url, 16)
+    photos = explorer.findPhotosWithGeoTag(start_page, end_page)
+
 
     exportPhotoDataToCsv(export_path, photos)
 

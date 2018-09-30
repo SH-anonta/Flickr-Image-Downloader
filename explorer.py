@@ -15,12 +15,19 @@ class Photo:
         try:
             logging.info('Retrieving EXIF data of {}'.format(photo.id))
             self.exif = self._exifToDict(photo.getExif())
+        except flickr_api.flickrerrors.FlickrAPIError as e:
+            logging.error('Failed to retrieve EXIF data of photo {}, | Error: {}'.format(photo.id,  e))
         except:
             logging.error('Failed to retrieve EXIF data of photo {}, | Error: {}'.format(photo.id, sys.exc_info()[0]))
 
 
     def hasGpsData(self):
-        return 'GPSLatitude' in self.exif or 'GPS GPSLatitude' in self.exif
+        return 'GPSLatitude' in self.exif \
+               or 'GPS' in self.exif \
+               or 'GPS Latitude' in self.exif \
+               or 'GPS Position' in self.exif \
+               or 'GPS Altitude' in self.exif \
+
 
     def _exifToDict(self, exif):
         return {
@@ -43,7 +50,9 @@ class FlickrUserExplorer:
 
     # a target function for threads spawned by findPhotos method
     def _retrievePhotosFromPage(self, page_number):
-        return self.user.getPhotos(page_number= page_number)
+        photos = self.user.getPhotos(page= page_number)
+        logging.info('Explored page {}, {} photos found'.format(page_number, len(photos)))
+        return photos
 
 
     # Find all photos in the user's page
@@ -55,8 +64,10 @@ class FlickrUserExplorer:
         # Used to detect if the last page has already been reached
         all_photos = []
 
+        pages = range(start_page, end_page+1)
+
         thread_pool = ThreadPool(processes= self.MAX_THREADS)
-        results = thread_pool.map(self._retrievePhotosFromPage, range(start_page, end_page+1))
+        results = thread_pool.map(self._retrievePhotosFromPage, pages)
         thread_pool.close()
         thread_pool.join()
 
@@ -93,29 +104,3 @@ class FlickrUserExplorer:
         logging.info('Photos with GPS data found: {}'.format(len(filtered)))
 
         return filtered
-
-    # Retrieves EXIF of given photo object
-    # return empty dict if it fails to retrieve data
-    def _retrieveExifData(self, photo):
-        logging.error('Retrieving EXIF data of photo {}'.format(photo.id))
-
-        exif = {}
-
-        try:
-            exif = photo.getExif()
-            exif = self._exifToDict(exif)
-        except flickr_api.flickrerrors.FlickrAPIError as e:
-            logging.error('Failed to retrieve EXIF data of photo {}, | Error: {}'.format(photo.id,  e.message))
-
-        return exif
-
-    # Expects a dictionary containing exif data
-
-    def _hasGPSData(self, exif):
-        return 'GPSLatitude' in exif or 'GPS GPSLatitude' in exif
-
-    def _exifToDict(self, exif):
-        return {
-            x.tag : x.raw
-            for x in exif
-        }

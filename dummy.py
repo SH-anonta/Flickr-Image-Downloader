@@ -125,25 +125,33 @@ def retrieveParams():
 
 
 
+# if __name__ == '__main__':
+#     user_name, export_path, start, end, max_page = retrieveParams()
+#
+#     # end should be < 0 if the user wats to download all photos
+#     if end < 0:
+#         end = None
+#
+#     if not os.path.isdir(export_path):
+#         os.mkdir(export_path)
+#
+#     print user_name, export_path, start, end
+#
+#     api_key = 'f5fc9ccc5de725609c3696947fef7413'
+#     api_secret = '7845ccc1869642ca'
+#
+#     # Logs will be sent to console and a file
+#     log_file_path = os.path.join(export_path, 'app.log')
+#     logging.basicConfig(filename= log_file_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+#     logging.getLogger().addHandler(logging.StreamHandler())
+#
+#     loader = FlickLoader(user_name, export_path, api_key, api_secret)
+#     loader.collectAllPhotos(start, end, max_page)
+
 if __name__ == '__main__':
-    user_name, export_path, start, end, max_page = retrieveParams()
-
-    # end should be < 0 if the user wats to download all photos
-    if end < 0:
-        end = None
-
-    if not os.path.isdir(export_path):
-        os.mkdir(export_path)
-
-    print user_name, export_path, start, end
-
     api_key = 'f5fc9ccc5de725609c3696947fef7413'
     api_secret = '7845ccc1869642ca'
+    flickr_api.set_keys(api_key=api_key, api_secret=api_secret)
 
-    # Logs will be sent to console and a file
-    log_file_path = os.path.join(export_path, 'app.log')
-    logging.basicConfig(filename= log_file_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    logging.getLogger().addHandler(logging.StreamHandler())
+    user = flickr_api.Person.findByUrl('https://www.flickr.com/photos/mrkotek/')
 
-    loader = FlickLoader(user_name, export_path, api_key, api_secret)
-    loader.collectAllPhotos(start, end, max_page)

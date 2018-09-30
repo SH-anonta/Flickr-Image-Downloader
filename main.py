@@ -24,13 +24,14 @@ def configureLogging(export_path):
 def exportPhotoDataToCsv(export_path, photos):
     file_path = os.path.join(export_path, 'data.csv')
 
-    csv_fields = ('ID','EXIF')
+    csv_fields = ('ID','FileName','EXIF')
     with open(file_path, 'wb') as f:
         writer = csv.DictWriter(f, csv_fields)
 
         for photo in photos:
             writer.writerow({
                 "ID": photo.data.id,
+                "FileName" : downloader.generateFileName(photo),
                 "EXIF" : json.dumps(photo.exif)
             })
 
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
     logging.info('-------------------Start-------------------')
 
-    explorer = explorer.FlickrUserExplorer(url)
+    explorer = explorer.FlickrUserExplorer(url, 10)
     photos = explorer.findPhotosWithGeoTag(1, 14)
 
     exportPhotoDataToCsv(export_path, photos)
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     photo_path = os.path.join(export_path, 'photos')
     createDirectory(photo_path)
 
-    download = downloader.PhotoDownloader(photo_path)
+    download = downloader.PhotoDownloader(photo_path, 8)
     download.downloadPhotos(photos)
 
 

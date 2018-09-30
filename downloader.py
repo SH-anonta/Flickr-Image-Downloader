@@ -3,6 +3,13 @@ import logging
 import os.path
 import sys
 
+
+def generateFileName(photo):
+    # title = photo.data.title
+    # title = ''.join(x for x in title if x.isalnum() or x == ' ')
+    # return '{}-{}.jpg'.format(photo.data.id, title)
+    return '{}.jpg'.format(photo.data.id)
+
 class PhotoDownloader:
 
     def __init__(self, export_path, max_threads= 4):
@@ -28,8 +35,11 @@ class PhotoDownloader:
 
 
     def downloadPhoto(self, photo):
-        name = self.generateFileName(photo)
+        name = generateFileName(photo)
         save_to = os.path.join(self.export_path, name)
+
+        if os.path.isdir(save_to):
+            logging.warn('Attempting to overwrite file: {}'.format(save_to))
 
         try:
             logging.info('Downloading: photo {}'.format(photo.data.id))
@@ -40,5 +50,4 @@ class PhotoDownloader:
             self.total_download_fails+= 1
             logging.error('Failed to save photo {} to file: {}'.format(photo.data.id, sys.exc_info()[0]))
 
-    def generateFileName(self, photo):
-        return str(photo.data.id)+'.jpg'
+

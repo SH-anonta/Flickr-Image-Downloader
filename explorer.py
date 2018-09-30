@@ -63,14 +63,6 @@ class FlickrUserExplorer:
         for x in results:
             all_photos.extend(x)
 
-        # loop until the last photo page is found
-        for page_no in range(start_page, end_page+1):
-            photos = self.user.getPhotos(page=page_no)
-            logging.info('Explored page {}, Photos found: {}'.format(page_no, len(photos)))
-
-            page_no += 1
-
-
         logging.info('Total {} photos found'.format(len(all_photos)))
 
         return all_photos

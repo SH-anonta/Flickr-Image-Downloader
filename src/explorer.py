@@ -7,10 +7,25 @@ import logging
 
 
 class Photo:
+    _GPS_TAGS = ['gpslatitude','gps','gps latitude','gps position','gps altitude', 'latitude', 'position']
+
     def __init__(self, photo):
         self.data = photo
         # sends request to flickr api
         self.exif = {}
+
+    def setExif(self, exif_data):
+        self.exif =  exif_data
+
+    def hasGpsData(self):
+        for x in self.exif.keys():
+            if x.lower() in Photo._GPS_TAGS:
+                return True
+
+        return False
+
+    def downloadExifData(self):
+        photo = self.data
 
         try:
             logging.info('Retrieving EXIF data of {}'.format(photo.id))
@@ -20,14 +35,7 @@ class Photo:
         except:
             logging.error('Failed to retrieve EXIF data of photo {}, | Error: {}'.format(photo.id, sys.exc_info()[0]))
 
-
-    def hasGpsData(self):
-        return 'GPSLatitude' in self.exif \
-               or 'GPS' in self.exif \
-               or 'GPS Latitude' in self.exif \
-               or 'GPS Position' in self.exif \
-               or 'GPS Altitude' in self.exif \
-
+        return self.exif
 
     def _exifToDict(self, exif):
         return {
@@ -44,7 +52,8 @@ class FlickrUserExplorer:
         logging.info('User loaded')
 
         self.discovered_photos = []
-        self.discovered_photos_lock = threading.RLock()
+        self.filtered_photos= []
+        self.filtered_photos_lock = threading.RLock()
 
         self.MAX_THREADS = threads
 
@@ -54,6 +63,16 @@ class FlickrUserExplorer:
         logging.info('Explored page {}, {} photos found'.format(page_number, len(photos)))
         return photos
 
+    def _retrievePhotoExif(self, photo):
+        # convert the object returned by flickr_api into a Photo object
+        photo = Photo(photo)
+        photo.downloadExifData()
+
+        if photo.hasGpsData():
+            with self.filtered_photos_lock:
+                self.filtered_photos.append(photo)
+        else:
+            logging.info('Filtering out photo {} for not having GPS data'.format(photo.data.id))
 
     # Find all photos in the user's page
     # if end_page is not provided, all pages will be explored, starting from start_page
@@ -89,18 +108,11 @@ class FlickrUserExplorer:
         thread_pool = ThreadPool(processes= self.MAX_THREADS)
 
         # maps all photo objects to Photo objects, with exif data
-        photos = thread_pool.map(Photo, photos)
+        thread_pool.map_async(self._retrievePhotoExif, photos)
         thread_pool.close()
         thread_pool.join()
 
-        filtered = []
 
-        for photo in photos:
-            if photo.hasGpsData():
-                filtered.append(photo)
-            else:
-                logging.info('Filtering out photo {}, for not having GPS data'.format(photo.data.id))
+        logging.info('-----Photos with GPS data found: {}-----'.format(len(self.filtered_photos)))
 
-        logging.info('Photos with GPS data found: {}'.format(len(filtered)))
-
-        return filtered
+        return self.filtered_photos
